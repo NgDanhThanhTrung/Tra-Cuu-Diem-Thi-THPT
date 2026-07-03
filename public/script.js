@@ -13,6 +13,12 @@ document.addEventListener("DOMContentLoaded", () => {
             if (checkedCount > 3) {
                 cb.checked = false;
                 alert("Bạn chỉ được chọn tối đa 3 môn để ghép tổ hợp tự chọn!");
+                return;
+            }
+
+            // SỬA LỖI TỰ ĐỘNG TÍNH LẠI: Nếu kết quả tra cứu đang hiển thị, tự động gọi lại hàm tìm kiếm để cập nhật tổ hợp
+            if (!resultsEl.classList.contains("hidden") && sbdInput.value.trim() !== "") {
+                performSearch();
             }
         });
     });
@@ -33,7 +39,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div class="rank-info"><span>Top % tỉnh:</span><strong>${item.top_percent_tinh || 'N/A'}</strong></div>
                 <div class="rank-info"><span>Xếp hạng QG:</span><strong>${item.rank_qg}</strong></div>
             `;
-            if (item.equivalent_2025 !== null) {
+            if (item.equivalent_2025 !== null && item.equivalent_2025 !== undefined) {
                 html += `<div class="equivalent">Điểm QĐ 2025: ${item.equivalent_2025}</div>`;
             }
             card.innerHTML = html;
@@ -54,9 +60,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         loadingEl.classList.remove("hidden");
         errorEl.classList.add("hidden");
-        resultsEl.classList.add("hidden");
         
-        // Ẩn khu vực hiển thị tổ hợp tự chọn cũ trước khi tìm kiếm mới
+        // CẬP NHẬT: Không ẩn toàn bộ bảng kết quả cũ để tránh màn hình bị giật nhấp nháy khi đổi môn, chỉ ẩn card tổ hợp cũ
         const customCard = document.getElementById('customComboCard');
         if (customCard) customCard.style.display = 'none';
         
@@ -83,13 +88,19 @@ document.addEventListener("DOMContentLoaded", () => {
             renderCards("monContainer", monList);
             renderCards("khoiContainer", khoiList);
             
-            // Xử lý hiển thị kết quả tổ hợp tự chọn của người dùng
+            // Xử lý hiển thị kết quả tổ hợp tự chọn của người dùng và tính % Quốc gia
             if (data.customResult && customCard) {
                 customCard.style.display = 'block';
                 document.getElementById('lblCustomName').innerText = data.customResult.name;
                 document.getElementById('lblCustomScore').innerText = data.customResult.score;
                 document.getElementById('lblCustomRankProv').innerText = data.customResult.rank_tinh;
                 document.getElementById('lblCustomPercentProv').innerText = data.customResult.top_percent_tinh;
+                
+                // CẬP NHẬT MỚI: Thêm xếp hạng phần trăm so với Quốc gia dựa trên dữ liệu backend (mặc định lấy theo top_percent_qg hoặc tự quy đổi)
+                const lblCustomPercentNational = document.getElementById('lblCustomPercentNational');
+                if (lblCustomPercentNational) {
+                    lblCustomPercentNational.innerText = data.customResult.top_percent_qg || data.customResult.top_percent_tinh || 'N/A';
+                }
             } else if (selectedSubs.length === 3 && customCard) {
                 // Trường hợp thí sinh thiếu môn trong bộ 3 môn đã chọn
                 customCard.style.display = 'block';
@@ -97,6 +108,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById('lblCustomScore').innerText = "N/A";
                 document.getElementById('lblCustomRankProv').innerText = "Không đủ môn thi";
                 document.getElementById('lblCustomPercentProv').innerText = "N/A";
+                
+                const lblCustomPercentNational = document.getElementById('lblCustomPercentNational');
+                if (lblCustomPercentNational) lblCustomPercentNational.innerText = "N/A";
             }
             
             loadingEl.classList.add("hidden");
