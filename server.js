@@ -4,11 +4,9 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Phục vụ giao diện tĩnh từ thư mục public
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
-// Cấu hình link GitHub Raw gốc của bạn
 const BASE_RAW_URL = "https://raw.githubusercontent.com/NgDanhThanhTrung/Tra-Cuu-Diem-Thi-THPT/refs/heads/main/data";
 
 const RAW_LINKS = {
@@ -18,15 +16,23 @@ const RAW_LINKS = {
     provincesBaseUrl: `${BASE_RAW_URL}/provinces`
 };
 
-// Hàm tải dữ liệu Raw từ xa, tự động hủy sau 8 giây nếu phản hồi chậm
+const displayNames = [
+    "Toán", "Ngữ văn", "Vật lý", "Hóa học", "Sinh học", "Lịch sử", "Địa lý", "Ngoại ngữ",
+    "Khối A00", "Khối A01", "Khối B00", "Khối C00", "Khối D01", "Khối A02", "Khối C01", "Khối D07"
+];
+
+// Mapping tên gốc trong file JSON (cols) với tên hiển thị tiếng Việt
+const colMapping = {
+    "toan": "Toán", "ngu_van": "Ngữ văn", "vat_ly": "Vật lý", "hoa_hoc": "Hóa học",
+    "sinh_hoc": "Sinh học", "lich_su": "Lịch sử", "dia_ly": "Địa lý", "ngoai_ngu": "Ngoại ngữ"
+};
+
 async function fetchRawData(url) {
     try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 8000);
-
         const response = await fetch(url, { signal: controller.signal });
         clearTimeout(timeoutId);
-
         if (!response.ok) return null;
         return await response.json();
     } catch (error) {
@@ -35,7 +41,6 @@ async function fetchRawData(url) {
     }
 }
 
-// Thuật toán xử lý số liệu điểm số
 const getSortedMap = (freqMap) => {
     if (!freqMap) return [];
     return Object.keys(freqMap)
@@ -74,9 +79,9 @@ const getEquivalentScore = (sortedMap, percentile) => {
     return sortedMap.length > 0 ? sortedMap[sortedMap.length - 1].score : null;
 };
 
-// [API] Tra cứu điểm số báo danh
+// [API] Tra cứu điểm số báo danh & Tính tổ hợp 3 môn động
 app.get('/api/lookup', async (req, res) => {
-    const { sbd } = req.query;
+    const { sbd, customSubjects } = req.query; // customSubjects truyền lên dạng: 'toan,vat_ly,hoa_hoc'
     if (!sbd || sbd.length !== 8) {
         return res.status(400).json({ error: "Số báo danh phải đúng 8 chữ số." });
     }
@@ -96,13 +101,9 @@ app.get('/api/lookup', async (req, res) => {
 
     const studentScores = provData.students[sbd];
     const cols = provData.cols;
-    const responseData = { sbd, ma_tinh, results: [] };
+    const responseData = { sbd, ma_tinh, results: [], customResult: null };
 
-    const displayNames = [
-        "Toán", "Ngữ văn", "Vật lý", "Hóa học", "Sinh học", "Lịch sử", "Địa lý", "Ngoại ngữ",
-        "Khối A00", "Khối A01", "Khối B00", "Khối C00", "Khối D01", "Khối A02", "Khối C01", "Khối D07"
-    ];
-
+    // 1. Xử lý logic tra cứu mặc định sẵn có
     for (let i = 0; i < cols.length; i++) {
         const ten_cot = cols[i];
         const diem_ts = studentScores[i];
@@ -127,8 +128,49 @@ app.get('/api/lookup', async (req, res) => {
             isKhoi: displayNames[i].startsWith("Khối"),
             rank_tinh: `${rank_tinh.toLocaleString()}/${tong_tinh.toLocaleString()}`,
             rank_qg: `${rank_qg.toLocaleString()}/${tong_qg.toLocaleString()}`,
+            top_percent_tinh: ((rank_tinh / tong_tinh) * 100).toFixed(2) + "%",
+            top_percent_qg: ((rank_qg / tong_qg) * 100).toFixed(2) + "%",
             equivalent_2025: equivalent_2025 !== null ? equivalent_2025.toFixed(2) : null
         });
+    }
+
+    // 2. PHẦN MỚI: Tính toán tổ hợp 3 môn động theo Tỉnh
+    const selectedSubs = customSubjects ? customSubjects.split(',') : [];
+    if (selectedSubs.length === 3) {
+        // Lấy index của 3 môn được chọn dựa theo mảng cols
+        const subIndices = selectedSubs.map(sub => cols.indexOf(sub));
+
+        // Kiểm tra xem thí sinh hiện tại có thi đủ 3 môn này không
+        const isValidCandidate = subIndices.every(idx => idx !== -1 && studentScores[idx] !== null && studentScores[idx] !== undefined);
+
+        if (isValidCandidate) {
+            const myCustomScore = Math.round(subIndices.reduce((sum, idx) => sum + studentScores[idx], 0) * 100) / 100;
+
+            let customHigherCount = 0;
+            let customTotalInProvince = 0;
+
+            // Quét qua toàn bộ thí sinh trong tỉnh để so thứ hạng (Real-time Compute)
+            Object.keys(provData.students).forEach(keySbd => {
+                const scores = provData.students[keySbd];
+                // Kiểm tra thí sinh vòng lặp có thi đủ 3 môn đã chọn hay không
+                const hasScores = subIndices.every(idx => scores[idx] !== null && scores[idx] !== undefined);
+                if (hasScores) {
+                    customTotalInProvince++;
+                    const stSum = Math.round(subIndices.reduce((sum, idx) => sum + scores[idx], 0) * 100) / 100;
+                    if (stSum > myCustomScore) {
+                        customHigherCount++;
+                    }
+                }
+            });
+
+            const rank_tinh_custom = customHigherCount + 1;
+            responseData.customResult = {
+                name: selectedSubs.map(sub => colMapping[sub]).join(' + '),
+                score: myCustomScore,
+                rank_tinh: `${rank_tinh_custom.toLocaleString()}/${customTotalInProvince.toLocaleString()}`,
+                top_percent_tinh: ((rank_tinh_custom / customTotalInProvince) * 100).toFixed(2) + "%"
+            };
+        }
     }
 
     res.json(responseData);
@@ -158,7 +200,6 @@ app.get('/api/convert-hsa', async (req, res) => {
     res.json({ pct, equivalent: equivalent.toFixed(2) });
 });
 
-// Chuyển hướng mọi request khác về trang chủ index.html
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
