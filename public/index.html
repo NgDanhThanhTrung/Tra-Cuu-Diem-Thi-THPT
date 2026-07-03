@@ -6,7 +6,7 @@
     <title>Tra Cứu Điểm Thi THPT 2026</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght=300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/style.css">
 </head>
@@ -48,15 +48,17 @@
                 <p>Mã tỉnh: <span id="resTinh"></span></p>
             </div>
 
-            <!-- TÍNH NĂNG MỚI: Card hiển thị kết quả tổ hợp động (Chỉ xuất hiện khi chọn đủ 3 môn) -->
+            <!-- ĐÃ CẬP NHẬT: Thẻ kết quả tổ hợp hiển thị cả % Tỉnh và % Quốc gia, đồng bộ với Script tự động tính lại -->
             <div id="customComboCard" style="display: none;">
                 <div class="custom-result-card">
                     <h3>📊 KẾT QUẢ TỔ HỢP TỰ CHỌN</h3>
-                    <div id="lblCustomName" style="font-weight: 600; font-size: 1.15rem; opacity: 0.9;"></div>
+                    <div id="lblCustomName" style="font-weight: 600; font-size: 1.15rem; opacity: 0.9; text-transform: uppercase;"></div>
                     <div id="lblCustomScore" class="custom-score"></div>
                     <div class="custom-details">
-                        Thứ hạng trong Tỉnh: <strong id="lblCustomRankProv"></strong> 
-                        (Thuộc Top <strong id="lblCustomPercentProv" style="color: #6ee7b7;"></strong> điểm cao nhất)
+                        <div>Thứ hạng trong Tỉnh: <strong id="lblCustomRankProv">--</strong> (Thuộc Top <strong id="lblCustomPercentProv" style="color: #6ee7b7;">--%</strong>)</div>
+                        <div style="margin-top: 8px; font-size: 0.95rem; opacity: 0.85;">
+                            <i class="fa-solid fa-globe"></i> Xếp hạng Quốc gia: Thuộc Top <strong id="lblCustomPercentNational" style="color: #ff7096;">--%</strong> thí sinh cao nhất cả nước
+                        </div>
                     </div>
                 </div>
             </div>
