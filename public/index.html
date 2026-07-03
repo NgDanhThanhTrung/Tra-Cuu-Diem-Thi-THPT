@@ -6,7 +6,7 @@
     <title>Tra Cứu Điểm Thi THPT 2026</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght=300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/style.css">
 </head>
@@ -18,6 +18,21 @@
         <div class="search-box">
             <input type="text" id="sbdInput" placeholder="Nhập số báo danh (VD: 01000001)" />
             <button id="searchBtn"><i class="fa-solid fa-magnifying-glass"></i> Tra cứu</button>
+        </div>
+
+        <!-- TÍNH NĂNG MỚI: Bộ chọn môn để tự thiết lập tổ hợp 3 môn động -->
+        <div class="custom-combo-section">
+            <p style="margin: 0; font-weight: 600; opacity: 0.95;"><i class="fa-solid fa-layer-group"></i> Tùy chọn: Tự thiết lập tổ hợp 3 môn (Tính thứ hạng Tỉnh lẻ)</p>
+            <div class="checkbox-group">
+                <label class="checkbox-label"><input type="checkbox" class="subject-cb" value="toan"> Toán</label>
+                <label class="checkbox-label"><input type="checkbox" class="subject-cb" value="ngu_van"> Ngữ văn</label>
+                <label class="checkbox-label"><input type="checkbox" class="subject-cb" value="vat_ly"> Vật lý</label>
+                <label class="checkbox-label"><input type="checkbox" class="subject-cb" value="hoa_hoc"> Hóa học</label>
+                <label class="checkbox-label"><input type="checkbox" class="subject-cb" value="sinh_hoc"> Sinh học</label>
+                <label class="checkbox-label"><input type="checkbox" class="subject-cb" value="lich_su"> Lịch sử</label>
+                <label class="checkbox-label"><input type="checkbox" class="subject-cb" value="dia_ly"> Địa lý</label>
+                <label class="checkbox-label"><input type="checkbox" class="subject-cb" value="ngoai_ngu"> Ngoại ngữ</label>
+            </div>
         </div>
         
         <div id="loading" class="hidden">
@@ -31,6 +46,19 @@
             <div class="student-info">
                 <h2>Số báo danh: <span id="resSBD"></span></h2>
                 <p>Mã tỉnh: <span id="resTinh"></span></p>
+            </div>
+
+            <!-- TÍNH NĂNG MỚI: Card hiển thị kết quả tổ hợp động (Chỉ xuất hiện khi chọn đủ 3 môn) -->
+            <div id="customComboCard" style="display: none;">
+                <div class="custom-result-card">
+                    <h3>📊 KẾT QUẢ TỔ HỢP TỰ CHỌN</h3>
+                    <div id="lblCustomName" style="font-weight: 600; font-size: 1.15rem; opacity: 0.9;"></div>
+                    <div id="lblCustomScore" class="custom-score"></div>
+                    <div class="custom-details">
+                        Thứ hạng trong Tỉnh: <strong id="lblCustomRankProv"></strong> 
+                        (Thuộc Top <strong id="lblCustomPercentProv" style="color: #6ee7b7;"></strong> điểm cao nhất)
+                    </div>
+                </div>
             </div>
             
             <div class="results-grid">
