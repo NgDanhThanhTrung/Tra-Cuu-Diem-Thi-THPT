@@ -5,6 +5,18 @@ document.addEventListener("DOMContentLoaded", () => {
     const errorEl = document.getElementById("error");
     const resultsEl = document.getElementById("results");
 
+    // Lắng nghe sự kiện Checkbox cho tổ hợp tự chọn (Tối đa 3 môn)
+    const checkboxes = document.querySelectorAll('.subject-cb');
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', () => {
+            const checkedCount = document.querySelectorAll('.subject-cb:checked').length;
+            if (checkedCount > 3) {
+                cb.checked = false;
+                alert("Bạn chỉ được chọn tối đa 3 môn để ghép tổ hợp tự chọn!");
+            }
+        });
+    });
+
     const renderCards = (containerId, data) => {
         const container = document.getElementById(containerId);
         container.innerHTML = "";
@@ -18,6 +30,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div class="subject-name">${item.name}</div>
                 <div class="score-value">${item.score}</div>
                 <div class="rank-info"><span>Xếp hạng tỉnh:</span><strong>${item.rank_tinh}</strong></div>
+                <div class="rank-info"><span>Top % tỉnh:</span><strong>${item.top_percent_tinh || 'N/A'}</strong></div>
                 <div class="rank-info"><span>Xếp hạng QG:</span><strong>${item.rank_qg}</strong></div>
             `;
             if (item.equivalent_2025 !== null) {
@@ -32,12 +45,29 @@ document.addEventListener("DOMContentLoaded", () => {
         const sbd = sbdInput.value.trim().replace(/\D/g, "").padStart(8, "0");
         if (!sbd || sbd === "00000000") return;
         
+        // Thu thập danh sách môn tự chọn
+        const selectedSubs = Array.from(document.querySelectorAll('.subject-cb:checked')).map(cb => cb.value);
+        if (selectedSubs.length > 0 && selectedSubs.length !== 3) {
+            alert("Vui lòng tích chọn đầy đủ 3 môn hoặc bỏ chọn hoàn toàn để tính tổ hợp.");
+            return;
+        }
+
         loadingEl.classList.remove("hidden");
         errorEl.classList.add("hidden");
         resultsEl.classList.add("hidden");
         
+        // Ẩn khu vực hiển thị tổ hợp tự chọn cũ trước khi tìm kiếm mới
+        const customCard = document.getElementById('customComboCard');
+        if (customCard) customCard.style.display = 'none';
+        
         try {
-            const res = await fetch(`/api/lookup?sbd=${sbd}`);
+            // Xây dựng URL API kèm theo tổ hợp môn tự chọn nếu có
+            let url = `/api/lookup?sbd=${sbd}`;
+            if (selectedSubs.length === 3) {
+                url += `&customSubjects=${selectedSubs.join(',')}`;
+            }
+
+            const res = await fetch(url);
             if (!res.ok) {
                 const errData = await res.json();
                 throw new Error(errData.error || "Không tìm thấy dữ liệu.");
@@ -52,6 +82,22 @@ document.addEventListener("DOMContentLoaded", () => {
             
             renderCards("monContainer", monList);
             renderCards("khoiContainer", khoiList);
+            
+            // Xử lý hiển thị kết quả tổ hợp tự chọn của người dùng
+            if (data.customResult && customCard) {
+                customCard.style.display = 'block';
+                document.getElementById('lblCustomName').innerText = data.customResult.name;
+                document.getElementById('lblCustomScore').innerText = data.customResult.score;
+                document.getElementById('lblCustomRankProv').innerText = data.customResult.rank_tinh;
+                document.getElementById('lblCustomPercentProv').innerText = data.customResult.top_percent_tinh;
+            } else if (selectedSubs.length === 3 && customCard) {
+                // Trường hợp thí sinh thiếu môn trong bộ 3 môn đã chọn
+                customCard.style.display = 'block';
+                document.getElementById('lblCustomName').innerText = selectedSubs.join(' + ').toUpperCase();
+                document.getElementById('lblCustomScore').innerText = "N/A";
+                document.getElementById('lblCustomRankProv').innerText = "Không đủ môn thi";
+                document.getElementById('lblCustomPercentProv').innerText = "N/A";
+            }
             
             loadingEl.classList.add("hidden");
             resultsEl.classList.remove("hidden");
